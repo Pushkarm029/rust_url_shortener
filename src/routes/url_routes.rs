@@ -17,7 +17,13 @@ pub fn url_routes(url_service: Arc<UrlService>) -> Router {
         .route("/api/urls", get(list_urls))
         .route("/api/stats/{short_id}", get(get_url_stats))
         .route("/{short_id}", get(redirect_url))
+        .route("/health", get(health_check))
         .with_state(url_service)
+}
+
+// Health check endpoint for testing and monitoring
+async fn health_check() -> impl IntoResponse {
+    StatusCode::OK
 }
 
 // Handler for shortening URLs

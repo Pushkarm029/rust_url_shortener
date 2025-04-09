@@ -15,21 +15,32 @@ TEST_SERVER_PORT="8081"
 TEST_DB_NAME="test_api_${UNIQUE_ID}.db"
 TEST_DB_PATH="${TEST_DB_NAME}"
 
-# CI environment detection
-if [ -n "$CI" ]; then
-    STARTUP_WAIT=5
-    READY_WAIT=5
-else
-    STARTUP_WAIT=2
-    READY_WAIT=2
-fi
+wait_for_server() {
+  local max_attempts=50
+  local wait_seconds=2
+  local attempt=1
+  local base_url="http://${TEST_SERVER_HOST}:${TEST_SERVER_PORT}"
+  
+  echo -e "${YELLOW}Waiting for server to be ready at ${base_url}...${NC}"
+  
+  while [ $attempt -le $max_attempts ]; do
+    if curl -s --head --fail "${base_url}/health" >/dev/null 2>&1; then
+      echo -e "${GREEN}Server is up and running after $(( attempt * wait_seconds )) seconds!${NC}"
+      return 0
+    fi
+    
+    echo -e "${YELLOW}Attempt ${attempt}/${max_attempts}: Server not ready yet, waiting ${wait_seconds}s...${NC}"
+    sleep $wait_seconds
+    attempt=$((attempt + 1))
+  done
+  
+  echo -e "${RED}Server failed to start after $(( max_attempts * wait_seconds )) seconds!${NC}"
+  return 1
+}
 
 setup() {
     echo -e "${YELLOW}Setting up test environment...${NC}"
     echo -e "${YELLOW}Current directory: $(pwd)${NC}"
-    
-    TEST_DB_NAME="test_api_${UNIQUE_ID}.db"
-    TEST_DB_PATH="${TEST_DB_NAME}"
     
     touch "${TEST_DB_PATH}"
     
@@ -45,13 +56,16 @@ setup() {
     cargo run &
     SERVER_PID=$!
     
-    echo -e "${YELLOW}Waiting for server to start (PID: ${SERVER_PID})...${NC}"
-    sleep $STARTUP_WAIT
-    
+    # Check if server process is running
     if kill -0 $SERVER_PID 2>/dev/null; then
-        echo -e "${GREEN}Server started successfully with PID: ${SERVER_PID}${NC}"
-        echo -e "${YELLOW}Waiting for server to fully initialize...${NC}"
-        sleep $READY_WAIT
+        echo -e "${GREEN}Server process started with PID: ${SERVER_PID}${NC}"
+        # Wait for server to be ready to accept connections
+        if wait_for_server; then
+            echo -e "${GREEN}Server is ready to accept connections${NC}"
+        else
+            echo -e "${RED}Server didn't start properly${NC}"
+            exit 1
+        fi
     else
         echo -e "${RED}Failed to start server. Check logs for errors.${NC}"
         exit 1
@@ -119,7 +133,6 @@ run_tests() {
     fi
     
     echo -e "${GREEN}Successfully created URL with short ID: $SHORT_ID${NC}"
-    sleep 1
     
     # Test 2: Create URL with custom ID
     echo -e "\n${YELLOW}Test 2: Creating a shortened URL with custom ID...${NC}"
@@ -145,7 +158,6 @@ run_tests() {
     fi
     
     echo -e "${GREEN}Successfully created URL with custom ID: $CUSTOM_ID${NC}"
-    sleep 1
     
     # Test 3: Get stats for first URL
     echo -e "\n${YELLOW}Test 3: Getting statistics for first URL...${NC}"
@@ -191,7 +203,6 @@ run_tests() {
     fi
 
     echo -e "${GREEN}Redirect successful with status code: ${REDIRECT_STATUS}${NC}"
-    sleep 1
 
     # Test 6: Verify visit count
     echo -e "\n${YELLOW}Test 6: Verifying visit count increased...${NC}"
