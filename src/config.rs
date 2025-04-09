@@ -9,7 +9,6 @@ pub struct Config {
     pub server_host: String,
     pub server_port: u16,
     pub short_url_length: usize,
-    pub enable_metrics: bool,
 }
 
 impl Config {
@@ -28,9 +27,6 @@ impl Config {
                 .unwrap_or_else(|_| "6".to_string())
                 .parse()
                 .unwrap_or(6),
-            enable_metrics: env::var("ENABLE_METRICS")
-                .map(|v| v.to_lowercase() == "true")
-                .unwrap_or(false),
         }
     }
 }

@@ -1,7 +1,9 @@
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use serde::Serialize;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -25,6 +27,12 @@ pub enum AppError {
     InvalidInput(String),
 }
 
+#[derive(Serialize)]
+struct ErrorResponse {
+    error: String,
+    status: u16,
+}
+
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
@@ -40,7 +48,13 @@ impl IntoResponse for AppError {
         };
 
         tracing::error!(%status, error_message = %error_message, "Request failed");
-        (status, error_message).into_response()
+
+        let error_response = ErrorResponse {
+            error: error_message,
+            status: status.as_u16(),
+        };
+
+        (status, Json(error_response)).into_response()
     }
 }
 

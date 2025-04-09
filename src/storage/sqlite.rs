@@ -5,17 +5,35 @@ use crate::errors::{AppError, Result};
 use crate::models::{UnixNanos, Url};
 use crate::storage;
 use sqlx::Row;
+use std::fs::File;
+use std::path::Path;
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// SQLite implementation of the Storage trait
+// SQLite implementation of the Storage trait
 pub struct SqliteStorage {
     pool: Pool<Sqlite>,
 }
 
 impl SqliteStorage {
-    /// Create a new SQLite storage instance
+    // Create a new SQLite storage instance
     pub async fn new(database_url: &str) -> Result<Self> {
+        // Check if database file exists, if not create an empty one
+        if database_url.starts_with("sqlite:") {
+            let path_str = database_url.trim_start_matches("sqlite:");
+            let db_path = Path::new(path_str);
+
+            if !db_path.exists() {
+                tracing::info!(
+                    "First run detected, creating new database file at {}",
+                    path_str
+                );
+                File::create(db_path).map_err(|e| {
+                    AppError::InternalError(format!("Failed to create database file: {}", e))
+                })?;
+            }
+        }
+
         // Create a connection pool
         let pool = SqlitePoolOptions::new()
             .max_connections(10)
@@ -29,7 +47,7 @@ impl SqliteStorage {
         Ok(Self { pool })
     }
 
-    /// Run database migrations
+    // Run database migrations
     async fn run_migrations(pool: &SqlitePool) -> Result<()> {
         sqlx::query(
             r#"
@@ -37,8 +55,8 @@ impl SqliteStorage {
                 short_id TEXT PRIMARY KEY,
                 original_url TEXT NOT NULL,
                 visit_count INTEGER NOT NULL DEFAULT 0,
-                created_at INTEGER NOT NULL,
-                last_accessed INTEGER
+                created_at TEXT NOT NULL,
+                last_accessed TEXT
             )
             "#,
         )

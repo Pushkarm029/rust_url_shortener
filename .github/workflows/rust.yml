@@ -11,14 +11,30 @@ env:
 
 jobs:
   test:
-    name: Test
+    name: Unit Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: Run tests
+      - name: Run unit tests
         run: cargo test
+
+  api_test:
+    name: API Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl
+      - name: Make test script executable
+        run: chmod +x test_api.sh
+      - name: Run API tests
+        run: ./test_api.sh
 
   fmt:
     name: Format

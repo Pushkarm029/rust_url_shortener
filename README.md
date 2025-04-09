@@ -76,10 +76,26 @@ Just open `http://localhost:8081/abc123` in your browser!
 
 ## 🧪 Testing
 
-Test the API endpoints with the included script:
+The project includes both unit tests and end-to-end API tests to ensure everything works correctly.
+
+### Unit Tests
+```bash
+cargo test
+```
+
+### API Integration Tests
 ```bash
 ./test_api.sh
 ```
+
+## 🔄 CI/CD Pipeline
+
+The project uses GitHub Actions to automate testing and quality checks:
+
+- ✅ **Unit Tests**: All code tests
+- 🔌 **API Integration Tests**: End-to-end API functionality tests
+- 📝 **Code Formatting**: Ensures consistent code style
+- 🔍 **Clippy Lints**: Catches common mistakes and improvements
 
 ## 🏗️ Architecture
 
@@ -91,10 +107,6 @@ Test the API endpoints with the included script:
                      └─────────────┘
 ```
 
-- **HTTP Layer**: Handles incoming requests with Axum
-- **Services**: Contains business logic, not tied to HTTP or database
-- **Storage**: Abstract trait with SQLite implementation (easy to swap databases!)
-
 ## 🔮 Future Improvements
 
 - Redis-based caching layer
@@ -102,21 +114,8 @@ Test the API endpoints with the included script:
 - Analytics dashboard
 - Rate limiting
 - Link expiration
+- Prometheus metrics integration
 
 ## 📜 License
 
 MIT
-
-
-# TODO
-- better RNG
-- Read requirements: prometheus
-- integration tests
-- fuzz tests if required
-
-
-> parse error: Invalid numeric literal at line 1, column 6
-- fix this, this should return actual error: which is it already exists, like we do in trace.
-- should we allow multiple long url to be stored
-
-- check everything is upto latest: in dep + rust.yml

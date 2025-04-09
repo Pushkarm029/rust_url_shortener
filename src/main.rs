@@ -50,7 +50,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "metrics")]
     {
         tracing::info!("Metrics enabled");
-        // In a real application, initialize Prometheus metrics here
     }
 
     // Build the router

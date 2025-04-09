@@ -1,34 +1,22 @@
 use crate::config::Config;
 use crate::errors::{AppError, Result};
-use crate::models::UnixNanos;
 use crate::models::{Url, UrlResponse};
 use crate::storage::Storage;
 use crate::utils;
 
-/// Service that handles URL shortening business logic
-///
-/// This service encapsulates all operations related to URL shortening,
-/// acting as a middleware between the HTTP handlers and storage layer.
-/// It enforces business rules and validation logic.
+// Service that handles URL shortening business logic
 pub struct UrlService {
     storage: Box<dyn Storage>,
     config: Config,
 }
 
 impl UrlService {
-    /// Creates a new UrlService with the given storage implementation and configuration
+    // Creates a new UrlService with the given storage and config
     pub fn new(storage: Box<dyn Storage>, config: Config) -> Self {
         Self { storage, config }
     }
 
-    /// Shortens a URL, either with a provided custom ID or a generated one
-    ///
-    /// # Arguments
-    /// * `original_url` - The URL to shorten
-    /// * `custom_id` - Optional custom identifier for the shortened URL
-    ///
-    /// # Returns
-    /// * `Result<UrlResponse>` - The shortened URL information or an error
+    // Shortens a URL, with either custom or generated ID
     pub async fn shorten_url(
         &self,
         original_url: &str,
@@ -115,10 +103,11 @@ impl UrlService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::UnixNanos;
     use async_trait::async_trait;
-    use chrono::Utc;
     use std::collections::HashMap;
     use std::sync::{Arc, Mutex};
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     // Mock storage implementation for testing
     struct MockStorage {
@@ -136,11 +125,16 @@ mod tests {
     #[async_trait]
     impl Storage for MockStorage {
         async fn create_url(&self, short_id: &str, original_url: &str) -> Result<Url> {
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+
             let url = Url {
                 short_id: short_id.to_string(),
                 original_url: original_url.to_string(),
                 visit_count: 0,
-                created_at: UnixNanos::from(Utc::now().timestamp_nanos() as u128),
+                created_at: UnixNanos::from(now),
                 last_accessed: None,
             };
 
@@ -161,7 +155,11 @@ mod tests {
             let mut urls = self.urls.lock().unwrap();
             if let Some(url) = urls.get_mut(short_id) {
                 url.visit_count += 1;
-                url.last_accessed = Some(UnixNanos::from(Utc::now().timestamp_nanos() as u128));
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos();
+                url.last_accessed = Some(UnixNanos::from(now));
                 Ok(())
             } else {
                 Err(AppError::NotFound(format!(
@@ -180,7 +178,7 @@ mod tests {
             let urls = self.urls.lock().unwrap();
             let mut all_urls: Vec<_> = urls.values().cloned().collect();
 
-            // Now that we've implemented Ord for UnixNanos, this will work
+            // Sort by created_at timestamp descending
             all_urls.sort_by(|a, b| b.created_at.cmp(&a.created_at));
 
             Ok(all_urls.into_iter().skip(offset).take(limit).collect())
@@ -196,7 +194,6 @@ mod tests {
             server_port: 8080,
             short_url_length: 6,
             storage_type: crate::storage::StorageType::Sqlite,
-            enable_metrics: false,
         };
 
         let storage = Box::new(MockStorage::new());
@@ -220,7 +217,6 @@ mod tests {
             server_port: 8080,
             short_url_length: 6,
             storage_type: crate::storage::StorageType::Sqlite,
-            enable_metrics: false,
         };
 
         let storage_mock = MockStorage::new();
@@ -253,7 +249,6 @@ mod tests {
             server_port: 8080,
             short_url_length: 6,
             storage_type: crate::storage::StorageType::Sqlite,
-            enable_metrics: false,
         };
 
         let storage = Box::new(MockStorage::new());
@@ -261,9 +256,9 @@ mod tests {
 
         // Test
         let url = "https://rust-lang.org";
-        let custom_id = "rustlang";
+        let custom_id = "rust".to_string();
         let result = service
-            .shorten_url(url, Some(custom_id.to_string()))
+            .shorten_url(url, Some(custom_id.clone()))
             .await
             .unwrap();
 

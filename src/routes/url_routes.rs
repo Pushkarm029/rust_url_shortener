@@ -20,7 +20,7 @@ pub fn url_routes(url_service: Arc<UrlService>) -> Router {
         .with_state(url_service)
 }
 
-/// Handler for shortening URLs
+// Handler for shortening URLs
 async fn shorten_url(
     State(url_service): State<Arc<UrlService>>,
     Json(payload): Json<CreateUrlRequest>,
@@ -32,7 +32,7 @@ async fn shorten_url(
     Ok((StatusCode::CREATED, Json(response)))
 }
 
-/// Handler for redirecting to the original URL
+// Handler for redirecting to the original URL
 async fn redirect_url(
     State(url_service): State<Arc<UrlService>>,
     Path(short_id): Path<String>,
@@ -41,7 +41,7 @@ async fn redirect_url(
     Ok(Redirect::permanent(&original_url))
 }
 
-/// Handler for getting URL statistics
+// Handler for getting URL statistics
 async fn get_url_stats(
     State(url_service): State<Arc<UrlService>>,
     Path(short_id): Path<String>,
@@ -50,14 +50,14 @@ async fn get_url_stats(
     Ok(Json(stats))
 }
 
-/// Query parameters for listing URLs
+// Query parameters for listing URLs
 #[derive(Debug, Deserialize)]
 struct ListUrlsQuery {
     limit: Option<usize>,
     offset: Option<usize>,
 }
 
-/// Handler for listing all URLs
+// Handler for listing all URLs
 async fn list_urls(
     State(url_service): State<Arc<UrlService>>,
     Query(params): Query<ListUrlsQuery>,
